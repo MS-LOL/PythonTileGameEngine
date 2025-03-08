@@ -1,0 +1,39 @@
+160 x 240 px gba screen
+30 x 20 tiles
+8 x 8 tiles
+3:2 aspect ratio
+want it to be 16:9
+16 x 9 tiles expended to 48 x 27 tiles
+each tile is 8 x 8 in gba but 16 x 16 here
+48 x 16 = 768
+27 x 16 = 432
+make it gba screen size or not
+768 / 2 = 384
+432 / 2 = 216
+384 x 216 px if gba size
+768 x 432 px if not
+
+768 x 432 we roll
+
+768 / 1920 = 0.4
+0.4 screen size
+wanna do fullscreen
+0.4 x 2.5 = 1
+
+nvm we doing 32 x 18 tiles
+32 x 16 = 512
+18 x 16 = 288
+512 x 288 px screen resolution
+
+disregard that.
+
+768 x 432
+
+1920 x 1080 screen size
+1920 / 16 = 120
+1080 / 16 = 67.5
+
+nvm we doing 16 x 9 tiles
+16 x 16 = 256
+16 x 9 = 144
+256 x 144 px

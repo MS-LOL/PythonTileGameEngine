@@ -3,6 +3,18 @@ import json
 import os
 import time
 import runpy
+from image_joiner import join_tiles
+
+# Global scaling constants.
+BASE_SCREEN_WIDTH = 256
+BASE_SCREEN_HEIGHT = 144
+SCALE_FACTOR = 2
+
+SCALED_SCREEN_WIDTH = BASE_SCREEN_WIDTH * SCALE_FACTOR
+SCALED_SCREEN_HEIGHT = BASE_SCREEN_HEIGHT * SCALE_FACTOR
+
+BASE_TILE_SIZE = 16
+SCALED_TILE_SIZE = BASE_TILE_SIZE * SCALE_FACTOR  # 32
 
 # Attempt to import Pillow for PNG conversion.
 try:
@@ -44,30 +56,24 @@ def load_texture(file_path):
 class Level:
     """
     Represents a game level loaded from a world folder.
-    Expects a JSON file (WORLD_FILENAME) with:
-      - background_data: texture filename for the background.
-      - floor_layer: 2D array of tile names.
-      - collision_layer: 2D array for collision.
-      - object_data: list of objects, each with:
-           texture_file_name, method_of_interaction, starting_coordinates, script_name.
-      - tile_data: list of tiles with:
-           tile_name, tile_texture_file_name, walking_sound_file_name.
-      - background_music: (optional) filename of an mp3 file.
+    Expects a JSON file (WORLD_FILENAME) with keys for background, floor layer,
+    collision layer, object data, tile data, etc.
     """
-    def __init__(self, world_path):
+    def __init__(self, world_path, tile_size=SCALED_TILE_SIZE):
         self.world_path = world_path
+        self.tile_size = tile_size
         self.data = self.load_world_data()
-        self.tiles = {}       # Maps tile names to texture file paths.
-        self.objects = []     # List of GameObject instances (includes the player).
+        self.tiles = {}       # Mapping of tile names to texture paths.
+        self.objects = []     # List of GameObject instances.
         self.background = None  # Background texture file path.
+        self.world_image_path = None  # Path to the pre-rendered world image.
         self.load_assets()
 
     def load_world_data(self):
         world_file = os.path.join(self.world_path, WORLD_FILENAME)
         try:
             with open(world_file, 'r') as f:
-                data = json.load(f)
-            return data
+                return json.load(f)
         except Exception as e:
             print(f"Error loading world data from {world_file}: {e}")
             return {}
@@ -89,6 +95,16 @@ class Level:
             if loaded_bg:
                 self.background = loaded_bg
 
+        # Pre-render the entire floor (world) image using the floor_layer data.
+        tile_map = self.data.get("floor_layer")
+        if tile_map:
+            world_img = join_tiles(tile_map, self.tiles, self.tile_size)
+            # Save the generated image to the world folder (or a temp path).
+            self.world_image_path = os.path.join(self.world_path, "temp_world_map.gif")
+            world_img.save(self.world_image_path, "GIF")
+            # Register the world image as a turtle shape.
+            turtle.register_shape(self.world_image_path)
+
         # Create objects from object_data.
         for obj in self.data.get("object_data", []):
             texture_path = os.path.join(self.world_path, obj["texture_file_name"])
@@ -98,14 +114,15 @@ class Level:
                 interaction_method=obj["method_of_interaction"],
                 start_pos=tuple(obj["starting_coordinates"]),
                 script_name=obj["script_name"],
-                world_path=self.world_path
+                world_path=self.world_path,
+                tile_size=self.tile_size  # Pass the scaled tile size.
             )
             self.objects.append(new_object)
 
-    def draw_floor_layer(self, tile_size=16):
+    def draw_floor_layer(self):
         """
-        Draws the floor layer based on the 2D array "floor_layer".
-        Each entry in the array should correspond to a tile name in tile_data.
+        (Optional) Draws the floor layer by stamping individual tiles.
+        Not used if the pre-rendered image is displayed.
         """
         floor = self.data.get("floor_layer")
         if not floor:
@@ -114,11 +131,10 @@ class Level:
         drawer = turtle.Turtle()
         drawer.hideturtle()
         drawer.penup()
-        # Assume that the floor layer's first row corresponds to y=0.
         for y, row in enumerate(floor):
             for x, tile_name in enumerate(row):
                 if tile_name in self.tiles:
-                    drawer.goto(x * tile_size, y * tile_size)
+                    drawer.goto(x * self.tile_size, y * self.tile_size)
                     drawer.shape(self.tiles[tile_name])
                     drawer.stamp()
 
@@ -126,21 +142,22 @@ class GameObject:
     """
     Represents an interactive object in the game world.
     """
-    def __init__(self, texture, interaction_method, start_pos, script_name, world_path):
+    def __init__(self, texture, interaction_method, start_pos, script_name, world_path, tile_size=SCALED_TILE_SIZE):
         self.texture = texture
-        self.interaction_method = interaction_method  # e.g., "trigger_zone" or "key_press"
-        self.start_pos = start_pos  # (x, y) tile coordinates.
-        self.script_name = script_name  # Script to run on interaction.
+        self.interaction_method = interaction_method
+        self.start_pos = start_pos
+        self.script_name = script_name
         self.world_path = world_path
+        self.tile_size = tile_size  # Store the scaled tile size.
         self.turtle = turtle.Turtle()
         if self.texture:
             self.turtle.shape(self.texture)
         self.turtle.penup()
         self.set_position_from_tile(start_pos)
 
-    def set_position_from_tile(self, tile_coords, tile_size=32):
+    def set_position_from_tile(self, tile_coords):
         x, y = tile_coords
-        self.turtle.goto(x * tile_size, y * tile_size)
+        self.turtle.goto(x * self.tile_size, y * self.tile_size)
 
     def interact(self):
         if self.script_name:
@@ -154,39 +171,36 @@ class Player(GameObject):
     """
     The player character.
     """
-    def __init__(self, texture, start_pos, world_path):
-        super().__init__(texture, interaction_method="player", start_pos=start_pos, script_name=None, world_path=world_path)
-        self.turtle.color("blue")  # Differentiate the player visually.
+    def __init__(self, texture, start_pos, world_path, tile_size=SCALED_TILE_SIZE):
+        super().__init__(texture, interaction_method="player", start_pos=start_pos, script_name=None, world_path=world_path, tile_size=tile_size)
+        self.turtle.color("blue")
 
 class Camera:
     """
-    Camera that follows a target (e.g., the player). Simulated using turtle's world coordinate system.
+    The camera follows a target (e.g., the player).
     """
-    def __init__(self):
-        self.x = 0
-        self.y = 0
+    def __init__(self, screen_width, screen_height):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
 
-    def follow(self, target):
-        self.x, self.y = target.turtle.position()
-        width, height = 800, 600  # Screen dimensions.
-        turtle.setworldcoordinates(self.x - width//2, self.y - height//2,
-                                   self.x + width//2, self.y + height//2)
+    def get_offset(self, target):
+        # Calculate an offset so that the player's position is centered.
+        offset_x = (self.screen_width / 2) - target.turtle.xcor()
+        offset_y = (self.screen_height / 2) - target.turtle.ycor()
+        return offset_x, offset_y
 
 class GameEngine:
     def __init__(self):
         self.screen = turtle.Screen()
-        self.screen.setup(width=800, height=600)
+        self.screen.setup(width=SCALED_SCREEN_WIDTH, height=SCALED_SCREEN_HEIGHT)
         self.screen.tracer(0)  # Manual updates for smoother animation.
         self.levels = self.load_levels()
         self.current_level = None
         self.player = None
-        self.camera = Camera()
+        self.camera = Camera(screen_width=SCALED_SCREEN_WIDTH, screen_height=SCALED_SCREEN_HEIGHT)
+        self.world_bg = None  # Turtle that displays the pre-rendered world image.
 
     def load_levels(self):
-        """
-        Searches the worlds directory (located next to engine.py) for valid world folders.
-        A valid world folder must contain the WORLD_FILENAME.
-        """
         levels = {}
         base_dir = os.path.dirname(__file__)
         worlds_dir = os.path.join(base_dir, "worlds")
@@ -201,42 +215,43 @@ class GameEngine:
         return levels
 
     def change_level(self, level_name):
-        """
-        Changes the current level with fade-out and fade-in transitions.
-        """
         if level_name not in self.levels:
             print(f"Level '{level_name}' not found!")
             return
 
         self.fade_out()
-        turtle.clearscreen()  # Clear current screen and reset turtle state.
-        self.current_level = Level(self.levels[level_name])
+        turtle.clearscreen()  # Reset turtle state.
+        self.current_level = Level(self.levels[level_name], tile_size=SCALED_TILE_SIZE)
+        
+        # Create a background turtle to display the pre-rendered world image.
+        if self.current_level.world_image_path:
+            self.world_bg = turtle.Turtle()
+            self.world_bg.shape(self.current_level.world_image_path)
+            self.world_bg.penup()
+            self.world_bg.speed(0)
+        else:
+            print("No pre-rendered world image available.")
 
-        # Draw the floor layer.
-        self.current_level.draw_floor_layer()
-
-        # For simplicity, assume the first object is the player.
+        # Assume the first object is the player.
         if self.current_level.objects:
             obj = self.current_level.objects[0]
-            self.player = Player(texture=obj.texture, start_pos=obj.start_pos, world_path=obj.world_path)
+            self.player = Player(texture=obj.texture, start_pos=obj.start_pos, world_path=obj.world_path, tile_size=self.current_level.tile_size)
             self.current_level.objects[0] = self.player
 
         self.fade_in()
 
     def fade_out(self):
-        """
-        Simulate a fade-out by drawing an expanding black rectangle.
-        """
         fade = turtle.Turtle()
         fade.hideturtle()
         fade.penup()
         fade.speed(0)
         fade.color("black")
-        width, height = 800, 600
+        # Use the scaled screen dimensions.
+        width, height = SCALED_SCREEN_WIDTH, SCALED_SCREEN_HEIGHT
         turtle.tracer(0)
         for i in range(20):
             fade.clear()
-            fade.goto(-width//2, -height//2)
+            fade.goto(-width/2, -height/2)
             fade.begin_fill()
             factor = (i + 1) / 20
             for _ in range(2):
@@ -251,19 +266,16 @@ class GameEngine:
         turtle.tracer(1)
 
     def fade_in(self):
-        """
-        Simulate a fade-in by reversing the fade-out effect.
-        """
         fade = turtle.Turtle()
         fade.hideturtle()
         fade.penup()
         fade.speed(0)
         fade.color("black")
-        width, height = 800, 600
+        width, height = SCALED_SCREEN_WIDTH, SCALED_SCREEN_HEIGHT
         turtle.tracer(0)
         for i in range(20, 0, -1):
             fade.clear()
-            fade.goto(-width//2, -height//2)
+            fade.goto(-width/2, -height/2)
             fade.begin_fill()
             factor = i / 20
             for _ in range(2):
@@ -278,24 +290,17 @@ class GameEngine:
         turtle.tracer(1)
 
     def game_loop(self):
-        """
-        Main game loop: update the camera and screen.
-        """
         while True:
-            self.current_level.draw_floor_layer()
-            if self.current_level.objects:
-                obj = self.current_level.objects[0]
-                self.player = Player(texture=obj.texture, start_pos=obj.start_pos, world_path=obj.world_path)
-                self.current_level.objects[0] = self.player
-            if self.player:
-                self.camera.follow(self.player)
+            if self.player and self.world_bg:
+                # Calculate offset to center the view on the player.
+                offset_x, offset_y = self.camera.get_offset(self.player)
+                # Position the background turtle so that the proper portion of the world image is visible.
+                self.world_bg.goto(offset_x, offset_y)
             self.screen.update()
             time.sleep(0.016)  # Approximately 60 FPS.
 
 def main():
     engine = GameEngine()
-
-    # For demonstration, load the first available level.
     if engine.levels:
         first_level = list(engine.levels.keys())[0]
         print(f"Loading level: {first_level}")
@@ -303,5 +308,7 @@ def main():
     else:
         print("No levels found in the worlds directory.")
         return
-
     engine.game_loop()
+
+if __name__ == '__main__':
+    main()
