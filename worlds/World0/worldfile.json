@@ -1,0 +1,45 @@
+{
+    "background_data": "background.png",
+    "floor_layer": [
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"],
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"],
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"],
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"],
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"],
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"],
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"],
+        ["carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet", "carpet"]
+    ],
+    "collision_layer": [
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1]
+    ],
+    "object_data": [
+        {
+            "texture_file_name": "player.png",
+            "method_of_interaction": "player",
+            "starting_coordinates": [1, 1],
+            "script_name": ""
+        },
+        {
+            "texture_file_name": "object1.png",
+            "method_of_interaction": "trigger_zone",
+            "starting_coordinates": [2, 2],
+            "script_name": "some_script.py"
+        }
+    ],
+    "tile_data": [
+        {
+            "tile_name": "carpet",
+            "tile_texture_file_name": "carpet.png",
+            "walking_sound_file_name": "walkingsound.mp3"
+        }
+    ],
+    "background_music": "backgroundmusic.mp3"
+}
