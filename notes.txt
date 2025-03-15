@@ -37,3 +37,66 @@ nvm we doing 16 x 9 tiles
 16 x 16 = 256
 16 x 9 = 144
 256 x 144 px
+
+The purpose of an __init__.py file is to mark a directory as a Python package and to provide a convenient place to export your package’s public API. For your project, you might want to make core classes and functions available at the package level so that other scripts (or level modules) can import them easily.
+
+For example, in your GameDir, you could create an __init__.py file like this:
+
+# __init__.py
+# This file marks GameDir as a package and exposes selected modules and classes.
+
+# Import core engine components
+from .engine import GameEngine
+from .WorldLoader import load_level
+from .level import Level
+from .objects import GameObject, Player
+from .camera import Camera
+
+# Import UI and debugging functions (if you want them available at the package level)
+from .ui import TitleScreen, LevelSelect, PauseScreen, Inventory, Map
+from .DebugConsole import OpenDebugConsoleWindow, LoadLevel, Teleport
+from .TextFunctions import DisplayLevelName, DisplayDialogueBox, DisplayNotificationText
+from .Settings import SCREEN_WIDTH, SCREEN_HEIGHT, SCALE_FACTOR
+
+# Optionally, define __all__ to restrict what is imported with 'from GameDir import *'
+__all__ = [
+    "GameEngine",
+    "load_level",
+    "Level",
+    "GameObject",
+    "Player",
+    "Camera",
+    "TitleScreen",
+    "LevelSelect",
+    "PauseScreen",
+    "Inventory",
+    "Map",
+    "OpenDebugConsoleWindow",
+    "LoadLevel",
+    "Teleport",
+    "DisplayLevelName",
+    "DisplayDialogueBox",
+    "DisplayNotificationText",
+    "SCREEN_WIDTH",
+    "SCREEN_HEIGHT",
+    "SCALE_FACTOR"
+]
+
+Explanation
+
+    Marking the package:
+    Having an __init__.py (even an empty one) tells Python that this directory is a package.
+
+    Importing core components:
+    The file imports classes and functions from your main modules so that they can be imported from the package directly. For example, a level script inside your worlds folder could now write:
+
+    from GameDir import GameEngine, load_level, DisplayLevelName
+
+    rather than having to reference each module individually.
+
+    Defining __all__:
+    Listing public names in __all__ is optional but can be useful to control what is exported when someone uses a wildcard import.
+
+You can adjust the contents of __init__.py to expose exactly the parts of your engine that you want level scripts or other modules to use. If you don’t want to expose everything, simply only import and list the ones you consider part of your public API.
+
+This structure makes your codebase more modular and user-friendly for level developers or other parts of your game system.
