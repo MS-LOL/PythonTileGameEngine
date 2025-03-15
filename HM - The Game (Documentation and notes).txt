@@ -1,0 +1,131 @@
+﻿Folder structure
+
+
+/GameDir
+        main.py
+        launcher.py
+        engine.py
+        ui.py
+        WorldLoader.py
+        Settings.py
+        DebugConsole.py
+        TextFunctions.py
+        /defaultassets
+                DefaultPlayer.png
+                Grass.png
+        /worlds
+                /world1 # A script file which contains links to surrounding files and has functions for the level (main loop for the world including checks for events, level loading and transition quick functions, event functions).
+                        World1.py
+                        Grass1.png
+                        Grass2.png
+                        Path.png
+                        Walking.mp3
+                        Background.png
+                        Player.png
+                        World1Level.csv
+                        CollisionLayer.csv
+                /campaign1 # a script that prepares a series of levels by calling another world and handling level transitions. It is visible in “campaign mode” which only shows campaigns.
+                        Campaign1.py
+
+
+
+
+############################# COMMENT THIS WAY IN THE FILES ###########################
+
+
+
+
+############################# IT’S MORE READABLE ######################################
+
+
+World file layout {
+From …. Import WorldLoader
+From …. Import Settings
+From …. Import DebugConsole
+From …. Import TextFunctions
+
+
+
+
+Class World1:
+        WORLDNAME = “WORLD ONE - HEATHERMOUNT MODULAR CORRIDOOR”
+        ISCAMPAIGN = False
+        PLAYERSPRITE = “Player.png”
+        ISDEFAULTPLAYERSPRITE = False
+        TILES = {“Grass1”: ”Grass1.png”, “Grass2”: “Grass2.png”, “Path”: “Path.png”}
+        BACKGROUND = “Background.png”
+        WALKINGSOUNDS = {“Grass1”: “Walking.mp3”}
+        COLLISIONLAYER = “CollisionLayer.csv”
+        
+        
+        Def MainLevelLoop(self):
+                If EventFlag1 = True:
+                        self.Event1()
+                
+                # other main code
+        
+        Def Event1(self):
+                # Event1 code here
+}
+
+
+Functions in TextFunctions.py {
+DisplayLevelName()
+DisplayTitleText(Line1, Line2optional)
+DisplaySideText(Line1)
+DisplayNotificationText(Line1)
+DisplayDialogueBox(Text, NameOptional)
+DisplayCustomTextBox(Text, x, y, font size
+}
+
+
+Functions in DebugConsole.py {
+OpenDebugConsoleWindow()
+LoadLevel(LevelName)
+LoadCampaign(CampaignName)
+RunEvent(EventName)
+Teleport(x, y)
+Noclip(Enable/disable)
+}
+
+
+Functions + classes in LevelLoader.py {
+LevelTransitions()
+FadeIn(colour)
+FadeOut(colour)
+SpiralIn(colour)
+SpiralOut(colour)
+InterlaceIn(colour)
+InterlaceOut(colour)
+SpotlightIn(colour)
+SpotlightOut(colour)
+LoadingScreens()
+        PlainLoadingScreen(colour)
+        ImageLoadingScreen(imagename)
+        ProgressBar()
+InitialiseLevel(LevelName)
+LoadMap()
+LoadAssets()
+SetPlayerSpawnPoint(x, y)
+LoadLevel(StartPosX, StartPosY, LevelName)
+}
+
+
+Functions + classes in ui.py {
+ChangeState(statenumenum)
+TitleScreen()
+LevelSelect(IsCampaignMode)
+LoadingScreen(Backgimage, hinttext, destinationtextoptional)
+PauseScreen()
+Inventory()
+Map()
+
+
+}
+
+
+Things to note:
+
+
+How will functions in main folder be called from level scripts? Mainly level text displaying and Level Loading.
+Figured it out. Use from …. Import modulename
