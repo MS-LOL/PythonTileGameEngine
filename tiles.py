@@ -56,10 +56,18 @@ class TileMap():
             tile.draw(self.map_surface)
     
     def read_tile_csv(self, filename):
-        tilesheet = []
+        tilesheet = {}
         with open(os.path.join(filename)) as data:
             data = csv.reader(data, delimiter=',')
             for row in data:
+                # What is the CSV format going to contain?
+                tile_id = row[0]
+                tilesheet[tile_id] = {
+                    "name": row[1],
+                    "texture": row[2],
+                    "walk_sound": row[3],
+                    "collision": row[4].lower() == "true"
+                }
                 tilesheet.append(list(row))
         return tilesheet
 

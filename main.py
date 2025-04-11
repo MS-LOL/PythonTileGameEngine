@@ -4,12 +4,30 @@ from spritesheet import Spritesheet
 
 ################################# LOAD UP A BASIC WINDOW AND CLOCK #################################
 pygame.init()
-DISPLAY_W, DISPLAY_H = 480, 270
-canvas = pygame.Surface((DISPLAY_W,DISPLAY_H))
-window = pygame.display.set_mode(((DISPLAY_W,DISPLAY_H)))
+DISPLAY_W, DISPLAY_H = 512, 288
+SCALE_FACTOR = 2
+SCALED_W, SCALED_H = DISPLAY_W * SCALE_FACTOR, DISPLAY_H * SCALE_FACTOR
+
+surfaces = {
+    "world": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "mainmenu": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "settingsmenu": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "levelselectmanu": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "campaignselectmenu": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "creditsmenu": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "gameover": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "pausemenu": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "loadingscreen": pygame.Surface((DISPLAY_W, DISPLAY_H)),
+    "overlay": pygame.Surface((DISPLAY_W, DISPLAY_H), pygame.SRCALPHA)  # Transparent overlay
+}
+
+active_surface = "mainmenu"  # Set the initial active surface
+# Set the initial active surface to "mainmenu"
+
+window = pygame.display.set_mode(((SCALED_W, SCALED_H)))
 running = True
 clock = pygame.time.Clock()
-
+pygame.display.set_caption("Chick Game")
 ################################# LOAD PLAYER AND SPRITESHEET###################################
 spritesheet = Spritesheet('spritesheet.png')
 player_img = spritesheet.parse_sprite('chick.png')
@@ -45,7 +63,9 @@ while running:
     canvas.fill((0, 180, 240)) # Fills the entire screen with light blue
     map.draw_map(canvas)
     canvas.blit(player_img, player_rect)
-    window.blit(canvas, (0,0))
+
+    scaled_canvas = pygame.transform.scale(canvas, (SCALED_W, SCALED_H))
+    window.blit(scaled_canvas, (0,0))
     pygame.display.update()
 
 

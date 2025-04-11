@@ -1,2 +1,2 @@
-TileName, TileTexture, WalkingSound
-grass1, grass1.png, walking1.mp3
+TileID, TileName, TileTexture, WalkingSound, Collision
+1, grass1, grass1.png, walking1.mp3, True
