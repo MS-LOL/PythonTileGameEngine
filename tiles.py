@@ -1,5 +1,9 @@
 import pygame, csv, os
 
+# I just realised that this file is structured in such a way that it has it's own surface.
+# This is excellent for drawing a preexisting scene onto the main game scene. Especially if loading each level uses Tile and TileMap.
+# This is a good way to load a level and draw it onto the main game scene. I will be using this for the main game scene.
+
 class Tile(pygame.sprite.Sprite):
 
     # Properties:
@@ -41,6 +45,7 @@ class TileMap():
 
     def __init__(self, filename, spritesheet):
         self.tile_size = 16
+        self.starting_positions = list()
         self.start_x, self.start_y = 0, 0
         self.spritesheet = spritesheet
         self.tiles = self.load_tiles(filename)
@@ -51,24 +56,40 @@ class TileMap():
     def draw_map(self, surface):
         surface.blit(self.map_surface, (0, 0))
     
+    def init_map_properties(self, map_properties_filename):
+        with open(os.path.join(map_properties_filename), encoding="utf-8") as data:
+            for line in data:
+                line = line.strip()
+                if line.startswith("START_POSITION"):
+                    # This is a single entry of a tuple, so we need to append it to the list
+                    self.starting_positions.append(int(line.split("=")[1].strip()))
+                    (self.start_x, self.start_y) = self.starting_positions[0]
+                elif line.startswith("MAP_CSV_FILENAME"):
+                    self.MAP_CSV_FILENAME = line.split("=")[1].strip()
+                elif line.startswith("TILE_CSV_FILENAME"):
+                    self.tile = line.split("=")[1].strip()
+    
     def load_map(self):
         for tile in self.tiles:
             tile.draw(self.map_surface)
     
     def read_tile_csv(self, filename):
         tilesheet = {}
-        with open(os.path.join(filename)) as data:
+        with open(os.path.join(filename), encoding="utf-8") as data:
             data = csv.reader(data, delimiter=',')
-            for row in data:
-                # What is the CSV format going to contain?
-                tile_id = row[0]
-                tilesheet[tile_id] = {
-                    "name": row[1],
-                    "texture": row[2],
-                    "walk_sound": row[3],
-                    "collision": row[4].lower() == "true"
+            for line_number, row in enumerate(data, start=1):
+                # Expected CSV format: Each row contains the tile name, texture file name (with extension), walk sound file name (with extension), and a boolean for collision (True/False).
+                tile_name = row[0]
+                if tile_name in tilesheet:
+                    # tilesheet[tile_name] is not None, which means that the tile name already exists in the dictionary
+                    # Something exists when it shouldn't
+                    # This is a duplicate tile name, so we need to raise an error
+                    raise ValueError(f"Duplicate tile name found in {filename} on line {line_number}: {tile_name}")
+                tilesheet[tile_name] = {
+                    "texture": row[1],
+                    "walk_sound": row[2],
+                    "collision": row[3].lower() == "true"
                 }
-                tilesheet.append(list(row))
         return tilesheet
 
     def read_map_csv(self, filename):
@@ -79,27 +100,34 @@ class TileMap():
                 map.append(list(row))
         return map
     
-    def load_tiles(self, filename):
+    def load_tiles(self, map_csv_filename, tile_csv_filename):
         tiles = []
-        map = self.read_csv(filename)
+        map = self.read_map_csv(map_csv_filename)
         x, y = 0, 0
         for row in map:
             x = 0
             for tile in row:
 
-                texturenames = self.read_tile_csv()
+                tilesheet = self.read_tile_csv(tile_csv_filename)
+                # We aren't going to be referencing the tile names to number keys, Instead we will replace this.
+                try:
+                    tiles.append(Tile(tilesheet[tile]["texture"], x * self.tile_size, y * self.tile_size, self.spritesheet))
+                except ValueError as e:
 
-                if tile == '0':
-                    self.start_x, self.start_y = x * self.tile_size, y * self.tile_size
-                elif tile == '1':
-                    tiles.append(Tile('grass.png', x * self.tile_size, y * self.tile_size, self.spritesheet))
-                elif tile == '2':
-                    tiles.append(Tile('grass2.png', x * self.tile_size, y * self.tile_size, self.spritesheet))
-                    # move to next tile in current row
+                    # Handle the error here (e.g., log it, raise a custom error, etc.)
+
+                    print(f"Error loading tile '{tile}' at ({x}, {y}): {e}")
+                    dump = dump + "Error loading tile " + tile + " at (" + x + ", " + y + "): " + e + "\n"
+
+                    # The dump variable is used for debugging when the exception causes a breakpoint.
+                    # Look at the dump variable in the memory viewer to see a trace of all the errors that occured as the result of one thing.
+                    
+                    raise ValueError(f"Error loading tile '{tile}' at ({x}, {y}): Unable to load tile due to duplicate entry in {tile_csv_filename}: {e}")
                 
+                # move to next tile in current row
                 x += 1
-                # Move to the next row
+            # Move to the next row
             y += 1
-            # store the size of the tile map
+        # store the size of the tile map
         self.map_w, self.map_h = x * self.tile_size, y * self.tile_size
         return tiles
