@@ -1,6 +1,16 @@
 from tiles import *
 from spritesheet import Spritesheet
 
+################################## LEVEL LOADING #################################
+def LoadLevel(level_directory):
+    """
+    Loads a level by its name.
+    :param level_directory: The name of the directory in the "worlds" directory which contains all the world data.
+    """
+    level_dir_full_path = os.path.join(os.path.dirname(__file__), 'worlds', level_directory)
+    spritesheet = Spritesheet('spritesheet.json', level_dir_full_path)
+    # Load the spritesheet for the level
+    # Load the level data from the CSV file
 
 ################################# LOAD UP A BASIC WINDOW AND CLOCK #################################
 pygame.init()
@@ -21,13 +31,13 @@ surfaces = {
     "overlay": pygame.Surface((DISPLAY_W, DISPLAY_H), pygame.SRCALPHA)  # Transparent overlay
 }
 
-active_surface = "mainmenu"  # Set the initial active surface
-# Set the initial active surface to "mainmenu"
+active_surface = "world"  # Set the initial active surface
+# Set the initial active surface to "mainmenu" changed to "world" to test the game
 
 window = pygame.display.set_mode(((SCALED_W, SCALED_H)))
 running = True
 clock = pygame.time.Clock()
-pygame.display.set_caption("Chick Game")
+pygame.display.set_caption("HM:TG")
 ################################## DEBUG VARIABLES #################################
 lock_surface = False # Set to True to lock the surface to the currently active surface
 # Set to False to allow switching between surfaces
@@ -40,12 +50,15 @@ true_no_collision = False # Set to True to disable all collision detection, maki
 trigger_debug_checkpoint = False # Set to True to trigger a breakpoint with the breakpoint() function
 # Upon continuing, this variable will be set to False again
 ################################# LOAD PLAYER AND SPRITESHEET###################################
-spritesheet = Spritesheet('spritesheet.png')
-player_img = spritesheet.parse_sprite('chick.png')
+
+#spritesheet = Spritesheet('spritesheet.json') # Todo: move this to a level initialisation function to load a spritesheet for each level
+level_dir_full_path = os.path.join(os.path.dirname(__file__), 'worlds', "World0")
+spritesheet = Spritesheet('spritesheet.json', level_dir_full_path)
+player_img = spritesheet.get_sprite('wall')
 player_rect = player_img.get_rect()
 
 #################################### LOAD THE LEVEL ############################################
-map = TileMap('test_level.csv', spritesheet )
+map = TileMap('map.csv', "tiles.csv", level_dir_full_path, spritesheet)
 #################################### SET THE STARTING POSITION OF THE PLAYER ###################
 player_rect.x, player_rect.y = map.start_x, map.start_y
 
@@ -72,11 +85,11 @@ while running:
     ################################# UPDATE/ Animate SPRITE #################################
 
     ################################# UPDATE WINDOW AND DISPLAY #################################
-    canvas.fill((0, 180, 240)) # Fills the entire screen with light blue
-    map.draw_map(canvas)
-    canvas.blit(player_img, player_rect)
-
-    scaled_canvas = pygame.transform.scale(canvas, (SCALED_W, SCALED_H))
+    surfaces[active_surface].fill((0, 180, 240)) # Fills the entire screen with light blue
+    map.draw_map(surfaces["world"])
+    surfaces["world"].blit(player_img, player_rect)
+    # surfaces[active_surface] is for some reason broken. a bunch of the tiles from the world are missing but there is life in the world.
+    scaled_canvas = pygame.transform.scale(surfaces[active_surface], (SCALED_W, SCALED_H))
     window.blit(scaled_canvas, (0,0))
     pygame.display.update()
     ################################## DEBUGGING #################################

@@ -14,10 +14,18 @@ class Tile(pygame.sprite.Sprite):
     # __init__(self, image, x, y, spritesheet)
     # draw(self, surface)
 
-    def __init__(self, image, x, y, spritesheet):
+    def __init__(self, tile, x, y, spritesheet):
+        """Initializes the Tile class by loading the sprite image and setting its position.
+
+        Args:
+            tile (str): The name of the sprite image (filename) to load from the spritesheet. Not to be confused with filename.
+            x (int): The width of the tile.
+            y (int): The height of the tile.
+            spritesheet (Spritesheet): The Spritesheet object used to load the sprite image.
+        """
         pygame.sprite.Sprite.__init__(self)
-        self.image = spritesheet.parse_sprite(image)
-        # Manual load in: self.image = pygame.image.load(image)
+        self.image = spritesheet.get_sprite(tile)
+        # Manual load in: self.image = pygame.image.load(image_filename)
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = x, y
     
@@ -43,17 +51,29 @@ class TileMap():
     # read_map_csv(self, filename)
     # load_tiles(self, filename)
 
-    def __init__(self, filename, spritesheet):
-        self.tile_size = 16
+    def __init__(self, map_csv_filename, tile_csv_filename, level_dir_full_path, spritesheet):
+        """Initializes the TileMap class by loading the tile map and its properties.
+        This is a class that loads a tile map from a CSV file and draws it onto a surface using a spritesheet.
+
+        Args:
+            filename (str): _description_
+            spritesheet (Spritesheet): _description_
+        """
+        self.tile_size = 8
         self.starting_positions = list()
         self.start_x, self.start_y = 0, 0
         self.spritesheet = spritesheet
-        self.tiles = self.load_tiles(filename)
+        self.tiles = self.load_tiles(os.path.join(level_dir_full_path, map_csv_filename), os.path.join(level_dir_full_path, tile_csv_filename))
         self.map_surface = pygame.Surface((self.map_w, self.map_h))
         self.map_surface.set_colorkey((0, 0, 0)) # use this for static game maps. I'm going to be making a moving map game so I will need a different method.
         self.load_map()
     
     def draw_map(self, surface):
+        """
+        Draws the map surface onto the given surface.
+
+        :param surface: The surface to draw the map onto.
+        """
         surface.blit(self.map_surface, (0, 0))
     
     def init_map_properties(self, map_properties_filename):
@@ -101,29 +121,31 @@ class TileMap():
         return map
     
     def load_tiles(self, map_csv_filename, tile_csv_filename):
+        """_summary_
+
+        Args:
+            map_csv_filename (_type_): _description_
+            tile_csv_filename (_type_): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+        """
         tiles = []
         map = self.read_map_csv(map_csv_filename)
+        tilesheet = self.read_tile_csv(tile_csv_filename)
         x, y = 0, 0
         for row in map:
             x = 0
             for tile in row:
-
-                tilesheet = self.read_tile_csv(tile_csv_filename)
-                # We aren't going to be referencing the tile names to number keys, Instead we will replace this.
-                try:
-                    tiles.append(Tile(tilesheet[tile]["texture"], x * self.tile_size, y * self.tile_size, self.spritesheet))
-                except ValueError as e:
-
-                    # Handle the error here (e.g., log it, raise a custom error, etc.)
-
-                    print(f"Error loading tile '{tile}' at ({x}, {y}): {e}")
-                    dump = dump + "Error loading tile " + tile + " at (" + x + ", " + y + "): " + e + "\n"
-
-                    # The dump variable is used for debugging when the exception causes a breakpoint.
-                    # Look at the dump variable in the memory viewer to see a trace of all the errors that occured as the result of one thing.
-                    
-                    raise ValueError(f"Error loading tile '{tile}' at ({x}, {y}): Unable to load tile due to duplicate entry in {tile_csv_filename}: {e}")
-                
+                # We aren't going to be referencing the tile names to number keys, Instead we will replace this in the file.
+                if tile == "none":
+                    # This is a blank tile, so we can skip it
+                    continue
+                else:
+                    tiles.append(Tile(tile, x * self.tile_size, y * self.tile_size, self.spritesheet))
                 # move to next tile in current row
                 x += 1
             # Move to the next row
